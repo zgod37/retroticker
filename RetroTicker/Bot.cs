@@ -1,43 +1,48 @@
 ﻿using System;
-using System.IO;
-using System.Net.Sockets;
-using System.Threading;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace RetroTicker {
-    internal class Bot {
+    class Bot {
 
-        //Bot credentials
-        BotConfig config;
+        ITickerModel model;
 
-        //TODO: put these in JSON file
-        public static String server;
+        private String server;
         private int port;
         private String nick;
         private String twitchPass;
         private String channel;
 
-        private static bool isRunning = false;
-        private bool isReading = false;
-
-        static StreamWriter writer;
-        static StreamReader reader;
+        public StreamWriter writer;
+        private StreamReader reader;
 
         KeepAlive keepAlive;
-        
-        public Bot() {
-            config = new BotConfig();
-            server = config.getServer();
-            port = config.getPort();
-            nick = config.getNick();
-            twitchPass = config.getTwitchPass();
-            channel = config.getChannel();
+
+        //thread-safe switches for connecting and reading chat
+        private volatile bool _isRunning;
+        private volatile bool _isReading;
+
+        public Bot(ITickerModel model, BotConfig config) {
+
+            this.model = model;
+
+            this.server = config.server;
+            this.port = config.port;
+            this.nick = config.nick;
+            this.twitchPass = config.twitchPass;
+            this.channel = config.channel;
         }
 
-        public static void send(String message) {
+        public override string ToString() {
+            return "Twitch nick: " + nick + " channel: " + channel;
+        }
+
+        public void send(String message) {
             try {
                 writer.WriteLine(message);
                 writer.Flush();
@@ -46,7 +51,7 @@ namespace RetroTicker {
             }
         }
 
-        public static void say(String message, String chan) {
+        public void say(String message, String chan) {
             try {
                 writer.WriteLine("PRIVMSG " + chan + " :" + message);
                 writer.Flush();
@@ -55,45 +60,33 @@ namespace RetroTicker {
             }
         }
 
-        public void disconnect() {
-            Console.WriteLine("Bot disconnecting!");
-            isRunning = false;
-        }
-
         public void Run() {
-
-            //connect to server with credentials
             try {
-
+                Console.WriteLine("Starting bot: " + this);
                 TcpClient irc = new TcpClient(server, port);
                 NetworkStream stream = irc.GetStream();
-
                 reader = new StreamReader(stream);
                 writer = new StreamWriter(stream);
-
-                //log in with credentials
                 send("PASS " + twitchPass);
                 send("NICK " + nick);
 
-                //start thread to stay connected
-                keepAlive = new KeepAlive();
-
-                //join channels and start message listener
+                keepAlive = new KeepAlive(this);
                 send("JOIN " + channel);
 
-                isRunning = true;
-
             } catch (Exception e) {
-                Console.WriteLine("START Error " + e.Message);
+                Console.WriteLine("Error occured starting the bot " + e);
+                return;
             }
 
+            _isRunning = true;
+            model.updateBotStatus();
+
             //**** MAIN LOOP ****
-            //process each line as its received from server
+            //TODO: separate this into diff function for reconnecting
             String line = "";
-            while (isRunning) {
+            while (_isRunning) {
                 try {
                     while ((line = reader.ReadLine()) != null) {
-
                         Console.WriteLine(line);
 
                         if (line.Contains("PING")) {
@@ -102,53 +95,71 @@ namespace RetroTicker {
 
                         if (line.Contains("PRIVMSG")) {
 
-                            String[] breakup = line.Split(' ');
-
-                            String user = breakup[0].Substring(1, breakup[0].IndexOf('!') - 1);
-
-                            String message = breakup[3].Substring(1) + " ";
-                            for (int i = 4; i < breakup.Length; i++) {
-                                message += breakup[i];
-                                message += " ";
-                            }
-
-                            if (isReading == true) {
-                                MainForm.addTwitchMessage(user, message);
+                            if (_isReading) {
+                                model.addChatMessage(line);
                             }
                         }
+
+                        //***NOTE*** bot does NOT break out of inner loop
+                        //***NOTE*** if_isRunning is set to false by other thread
+                        //***NOTE*** so use this as temporary work-around (need to fix later)
+                        if (!_isRunning) break;
                     }
+                } catch (SocketException socketException) {
+                    //if code reaches here, we lost connection to server
+                    //TODO: add code to auto-reconnect
+                    Console.WriteLine(socketException);
+                    break;
                 } catch (Exception e) {
-                    Console.WriteLine("onMessage error " + e);
+                    Console.WriteLine("Error occured: " + e);
                 }
             }
+
+            Console.WriteLine("Main loop exited for bot <" + this + ">");
         }
 
-        public void setReadingStatus(bool status) {
-            isReading = status;
+        public bool isRunning() {
+            return _isRunning;
         }
 
-        public bool isReadingChat() {
-            return isReading;
+        public bool isReading() {
+            return _isReading;
         }
 
-        public static bool running() {
-            return isRunning;
+        public void startReading() {
+            _isReading = true;
+            model.updateBotStatus();
+        }
+
+        public void stopReading() {
+            _isReading = false;
+            model.updateBotStatus();
+        }
+
+        public void disconnect() {
+            _isRunning = false;
+            _isReading = false;
+            model.updateBotStatus();
         }
 
     }
 
-    internal class KeepAlive {
+    class KeepAlive {
 
-        public KeepAlive() {
+        Bot bot;
+
+        public KeepAlive(Bot bot) {
+            this.bot = bot;
             Thread keepAlive = new Thread(new ThreadStart(this.Run));
             keepAlive.Start();
         }
 
         public void Run() {
-            while (Bot.running()) {
-                Bot.send("ping " + Bot.server);
+            while (bot.isRunning()) {
+                bot.send("ping irc.twitch.tv");
                 Thread.Sleep(30000);
             }
+            Console.WriteLine("KeepAlive loop exited for " + bot);
         }
     }
 }
