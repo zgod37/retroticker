@@ -17,7 +17,10 @@ namespace RetroTicker {
         //determines how the message is displayed on ticker
         public int displayType { get; set; }
 
+        //***** NOTE *****
         //depending on display type, get the appropriate instruction set
+        //check MessageFactory methods for descriptions of each set
+        //****************
         public List<String[]> rowInstructions { get; set; }
         public String[] columnInstructions { get; set; }
         public List<int[]> shuffledCoordinates { get; set; }

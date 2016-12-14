@@ -20,17 +20,15 @@ namespace RetroTicker {
         }
 
         public override string ToString() {
-            return "Config: " + server + " " +
+            return "Config loaded <" + server + " " +
                                 port + " " +
                                 nick + " " +
                                 twitchPass + " " +
-                                channel;
+                                channel +">";
         }
 
         public static String getFilePath() {
-            //String baseDir = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDi‌​rectory, "..\\..\\"));
             String baseDir = Path.GetFullPath(AppDomain.CurrentDomain.BaseDi‌​rectory);
-
             return baseDir + "data\\config.bin";
         }
 

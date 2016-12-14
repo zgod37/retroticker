@@ -11,6 +11,7 @@ namespace RetroTicker {
         Vertical,
         ScrollUp,
         ScrollDown,
+        Raining,
         TypeCount
     }
 }

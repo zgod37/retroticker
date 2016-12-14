@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace RetroTicker {
     class MessageFactory {
 
-        bool debugging = true;
+        bool debugging = false;
 
         Alphabet alphabet;
         Random rng;
@@ -51,7 +51,7 @@ namespace RetroTicker {
                 message.visibleText = message.fullText;
                 message.isScrolling = false;
             } else {
-                message.visibleText = message.fullText.Substring(0, 34);
+                message.visibleText = message.fullText.Substring(0, maxVisibleCharacters);
                 message.isScrolling = true;
                 message.fullText += "                                                   ";
                 message.columnInstructions = alphabet.getColumnInstructionsForMessage(message.fullText);

@@ -15,10 +15,10 @@ namespace RetroTicker {
         //retro ticker is comprised of matrix of panels
         //TODO: move to dimension data storage file and retrieve
         List<List<Panel>> panels;
-        int panelWidth = 5;
-        int panelHeight = 10;
-        int matrixWidth = 1025;
-        int matrixHeight = 100;
+        int panelWidth = 4;
+        int panelHeight = 4;
+        int matrixWidth = 820;
+        int matrixHeight = 40;
 
         //character display properties
         //calculated based on matrix/panel dimensions
@@ -62,38 +62,6 @@ namespace RetroTicker {
             Console.WriteLine("maxVisibleCharacters = " + maxVisibleCharacters);
         }
 
-        public void wipePanels(Message message) {
-            switch ((DisplayType)message.displayType) {
-                case DisplayType.Random:
-                    wipePanelsRandomly(message);
-                    break;
-                case DisplayType.Horizontal:
-                    wipePanelsHorizontally();
-                    break;
-                case DisplayType.Vertical:
-                    wipePanelsVertically();
-                    break;
-                case DisplayType.ScrollDown:
-                    wipeMessageDown(message);
-                    break;
-                case DisplayType.ScrollUp:
-                    wipeMessageUp(message);
-                    break;
-                default:
-                    wipePanelsInstantly();
-                    break;
-            }
-        }
-
-        public void displayMessageTest(Message message) {
-            //scrollMessageUp(message);
-            //wipeMessageUp(message);
-            //sleep(1);
-            //wipePanelsInstantly();
-            scrollMessageDown(message);
-            wipeMessageDown(message);
-        }
-
         public void displayShortMessage(Message message) {
             switch ((DisplayType)message.displayType) {
                 case DisplayType.Random:
@@ -111,11 +79,50 @@ namespace RetroTicker {
                 case DisplayType.Vertical:
                     layerMessageVertically(message);
                     break;
+                case DisplayType.Raining:
+                    displayMessageRaining(message);
+                    break;
                 default:
                     scrollMessageUp(message);
                     break;
             }
-            
+
+        }
+
+        public void wipePanels(Message message) {
+            switch ((DisplayType)message.displayType) {
+                case DisplayType.Random:
+                    wipePanelsRandomly(message);
+                    break;
+                case DisplayType.Horizontal:
+                    wipePanelsHorizontally();
+                    break;
+                case DisplayType.Vertical:
+                    wipePanelsVertically();
+                    break;
+                case DisplayType.ScrollDown:
+                    wipeMessageDown(message);
+                    break;
+                case DisplayType.ScrollUp:
+                    wipeMessageUp(message);
+                    break;
+                case DisplayType.Raining:
+                    wipeMessageRaining(message);
+                    break;
+                default:
+                    wipePanelsInstantly();
+                    break;
+            }
+        }
+
+        public void displayMessageTest(Message message) {
+            //scrollMessageUp(message);
+            //wipeMessageUp(message);
+            //sleep(1);
+            //wipePanelsInstantly();
+            displayMessageRaining(message);
+            sleep(100);
+            wipeMessageRaining(message);
         }
 
         public void displayScrollingMessage(Message message) {
@@ -138,7 +145,7 @@ namespace RetroTicker {
                 for (int charIndex = 0; charIndex < rowInstructions.Count; charIndex++) {
                     if (charIndex >= maxVisibleCharacters) break;
                     String instruction = rowInstructions[charIndex][row-1];
-                    colorRowFromInstructionAnimated(instruction, row, leftCol + (charIndex * 6), message.color);
+                    colorRowFromInstructionAnimated(instruction, row, leftCol + (charIndex * (Alphabet.CHARACTER_WIDTH + 1)), message.color);
                 }
             }
         }
@@ -150,6 +157,21 @@ namespace RetroTicker {
                 if (col >= panelsColCount) break;
                 colorColumnFromInstructionAnimated(instruction, upperCharacterRow, col, message.color);
                 col++;
+            }
+        }
+
+        private void displayMessageRaining(Message message) {
+            int leftCol = 1;
+            List<String[]> rowInstructions = message.rowInstructions;
+            for (int row = lowerCharacterRow; row >= upperCharacterRow; row--) {
+                for (int charIndex=0; charIndex < rowInstructions.Count; charIndex++) {
+                    if (charIndex >= maxVisibleCharacters) break;
+                    String instruction = rowInstructions[charIndex][row-1];
+                    for (int instructionIndex=0; instructionIndex<instruction.Length; instructionIndex++) {
+                        int col = (int) Char.GetNumericValue(instruction[instructionIndex]);
+                        colorSinglePanelAnimatedDescending(row, leftCol + col + (charIndex * (Alphabet.CHARACTER_WIDTH + 1)), message.color);
+                    }
+                }
             }
         }
 
@@ -256,6 +278,20 @@ namespace RetroTicker {
             }
         }
 
+        private void wipeMessageRaining(Message message) {
+            int leftCol = 1;
+            List<String[]> rowInstructions = message.rowInstructions;
+            for (int bottomRow = lowerCharacterRow; bottomRow >= upperCharacterRow; bottomRow--) {
+                for (int charIndex=0; charIndex<rowInstructions.Count; charIndex++) {
+                    String instruction = rowInstructions[charIndex][bottomRow-1];
+                    for (int instructionIndex = 0; instructionIndex < instruction.Length; instructionIndex++) {
+                        int col = (int)Char.GetNumericValue(instruction[instructionIndex]);
+                        wipeSinglePanelDescending(bottomRow, leftCol + col + (charIndex * (Alphabet.CHARACTER_WIDTH + 1)), message.color);
+                    }
+                }
+            }
+        }
+
         private void wipePanelsHorizontally() {
             foreach (List<Panel> row in panels) {
                 foreach (Panel panel in row) {
@@ -289,8 +325,27 @@ namespace RetroTicker {
             }
         }
 
+        private void wipeSinglePanelDescending(int row, int col, Color color) {
+            for (int i=row+1; i<panels.Count; i++) {
+                panels[i][col].BackColor = color;
+                panels[i - 1][col].BackColor = backColor;
+                sleep(2);
+            }
+            panels[panels.Count-1][col].BackColor = backColor;
+        }
+
         private void colorSinglePanel(int row, int col, Color color) {
             panels[row][col].BackColor = color;
+        }
+
+        private void colorSinglePanelAnimatedDescending(int row, int col, Color color) {
+            for (int i=0; i<=row; i++) {
+                panels[i][col].BackColor = color;
+                if (i>0) {
+                    panels[i - 1][col].BackColor = backColor;
+                }
+                sleep(2);
+            }
         }
 
         private void colorRowFromInstruction(String instruction, int row, int leftCol, Color color) {
