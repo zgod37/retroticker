@@ -76,11 +76,8 @@ namespace RetroTicker {
 
         public void testTicker() {
             //debug
+            displayMessages(model.createTestMessages());
 
-            List<Message> messages = model.createTestMessages();
-            foreach (Message message in messages) {
-                view.displayMessageTest(message);
-            }
         }
     }
 }

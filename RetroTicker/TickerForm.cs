@@ -29,8 +29,7 @@ namespace RetroTicker {
 
         public TickerForm() {
             InitializeComponent();
-            this.Size = new Size(matrixWidth + (panelWidth * 2), matrixHeight + (panelHeight * 4) - 1);
-            //this.FormBorderStyle = FormBorderStyle.None;
+            this.ClientSize = new Size(matrixWidth, matrixHeight);
             panels = new List<List<Panel>>();
             backColor = Color.FromArgb(40, 40, 40);
             createPanelMatrix();
@@ -116,13 +115,7 @@ namespace RetroTicker {
         }
 
         public void displayMessageTest(Message message) {
-            //scrollMessageUp(message);
-            //wipeMessageUp(message);
-            //sleep(1);
-            //wipePanelsInstantly();
-            displayMessageRaining(message);
-            sleep(100);
-            wipeMessageRaining(message);
+            //use for debugging
         }
 
         public void displayScrollingMessage(Message message) {
@@ -134,7 +127,7 @@ namespace RetroTicker {
             for (int i = 0; i < shuffledCoordinates.Count; i++) {
                 int[] coordinates = shuffledCoordinates[i];
                 colorSinglePanel(coordinates[0], coordinates[1], message.color);
-                sleep(3);
+                sleep(7);
             }
         }
 
@@ -218,7 +211,7 @@ namespace RetroTicker {
                     String instruction = columnInstructions[col + offset];
                     colorColumnFromInstruction(instruction, upperCharacterRow, col, message.color);
                 }
-                if (offset % 60 == 0) sleep(500);
+                if (offset % 45 == 0) sleep(750);
             }
         }
 
@@ -294,9 +287,11 @@ namespace RetroTicker {
 
         private void wipePanelsHorizontally() {
             foreach (List<Panel> row in panels) {
-                foreach (Panel panel in row) {
-                    panel.BackColor = backColor;
-                    sleep(1);
+                for (int i=0; i<row.Count; i++) {
+                    row[i].BackColor = backColor;
+                    if (i % 2 == 0) {
+                        sleep(1);
+                    }
                 }
             }
         }
@@ -315,7 +310,7 @@ namespace RetroTicker {
             for (int i = 0; i < coordinateList.Count; i++) {
                 int[] coordinates = coordinateList[i];
                 colorSinglePanel(coordinates[0], coordinates[1], backColor);
-                sleep(2);
+                sleep(6);
             }
         }
 

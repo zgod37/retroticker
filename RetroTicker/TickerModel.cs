@@ -42,7 +42,7 @@ namespace RetroTicker {
         }
 
         public void Run() {
-            //uses thread to read messages from bin
+            //uses thread to read messages from bin      
             while (bot.isReading()) {
                 checkMessageBinForDisplay();
             }
@@ -62,11 +62,44 @@ namespace RetroTicker {
             messageBin.Add(messageFactory.createChatMessage(rawText));
         }
 
-        public List<Message> createTestMessages() {
-            //for debugging
+        private List<Message> createDemoMessages() {
 
             List<Message> messages = new List<Message>();
-            for (int i = 0; i < 2; i++) messages.Add(messageFactory.createMessage("MSDS Short message" + i));
+
+            Message scrollUpMessage = messageFactory.createMessage("Scroll Up Scroll Up");
+            scrollUpMessage.displayType = (int)DisplayType.ScrollUp;
+            messages.Add(scrollUpMessage);
+
+            Message scrollDownMessage = messageFactory.createMessage("Scroll Down Scroll Down");
+            scrollDownMessage.displayType = (int)DisplayType.ScrollDown;
+            messages.Add(scrollDownMessage);
+
+            Message horizontalMessage = messageFactory.createMessage("Horizontal Horizontal Horizontal");
+            horizontalMessage.displayType = (int)DisplayType.Horizontal;
+            messages.Add(horizontalMessage);
+
+            Message verticalMessage = messageFactory.createMessage("Vertical Vertical Vertical");
+            verticalMessage.displayType = (int)DisplayType.Vertical;
+            messages.Add(verticalMessage);
+
+            Message rainingMessage = messageFactory.createMessage("Raining Raining Raining");
+            rainingMessage.displayType = (int)DisplayType.Raining;
+            messages.Add(rainingMessage);
+
+            Message randomMessage = messageFactory.createMessage("Random Random Random");
+            randomMessage.displayType = (int)DisplayType.Random;
+            messages.Add(randomMessage);
+
+            return messages;
+        }
+
+        public List<Message> createTestMessages() {
+            //for debugging messages
+            List<Message> messages = new List<Message>();
+            messageFactory.enableDebugging();
+            //messages = createDemoMessages();
+            messages.Add(messageFactory.createMessage(messageFactory.getAlphabetAsString()));
+            messageFactory.disableDebugging();
             return messages;
         }
 

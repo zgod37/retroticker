@@ -90,5 +90,17 @@ namespace RetroTicker {
             }
             return strippedText;
         }
+
+        public String getAlphabetAsString() {
+            return alphabet.ToString();
+        }
+
+        public void enableDebugging() {
+            debugging = true;
+        }
+
+        public void disableDebugging() {
+            debugging = false;
+        }
     }
 }

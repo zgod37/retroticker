@@ -19,6 +19,16 @@ namespace RetroTicker {
             createColumnInstructionsForAlphabet();
         }
 
+        public override String ToString() {
+            String alphabetString = "";
+            List<Char> keys = alphabetRowInstructions.Keys.ToList();
+            keys.Sort();
+            foreach (Char ch in keys) {
+                alphabetString += ch;
+            }
+            return alphabetString;
+        }
+
         private void createRowInstructionsForAlphabet() {
             // each character will contain the row - by - row instructions
             //each row contains 0-5 numbers of 0, 1, 2, 3, or 4

@@ -110,5 +110,9 @@ namespace RetroTicker {
         private void disconnectButton_Click(object sender, EventArgs e) {
             controller.disconnectBot();
         }
+
+        private void MainForm_Load(object sender, EventArgs e) {
+
+        }
     }
 }
