@@ -18,6 +18,8 @@ namespace RetroTicker {
         List<IMessageObserver> messageObservers = new List<IMessageObserver>();
         List<IBotObserver> botObservers = new List<IBotObserver>();
 
+        private volatile bool isReadingFile = false;
+
         public TickerModel() {
             Alphabet alphabet = new Alphabet();
             messageFactory = new MessageFactory(alphabet);
@@ -41,12 +43,41 @@ namespace RetroTicker {
             }
         }
 
-        public void Run() {
-            //uses thread to read messages from bin      
+        private void readMessagesFromChat() {
+            //** MESSAGE READING THREAD **
+            //reads messages from chat until user clicks the "stop reading" button
+               
             while (bot.isReading()) {
-                checkMessageBinForDisplay();
+                int messageCount = messageBin.Count;
+                Console.WriteLine("number of messages in bin = " + messageCount);
+                if (messageCount == 0) {
+                    Thread.Sleep(3000);
+                } else {
+                    List<Message> copyOfMessageBin = new List<Message>(messageBin);
+                    messageBin.Clear();
+                    notifyMessageObservers(copyOfMessageBin);
+                }
             }
             Console.WriteLine("Bot stopped reading.");
+        }
+
+        private void readMessagesFromFile() {
+            //** MESSAGE READING THREAD **
+            //reads messages from chat until user clicks the "stop reading" button
+            //NOTE: fills messageBin before loop, clears it after
+
+            fillMessageBinFromFile();
+            int messageCount = messageBin.Count;
+            if (messageCount > 0) {
+                while (isReadingFile) {
+                    notifyMessageObservers(messageBin);
+                }
+            } else {
+                Console.WriteLine("No messages found in file!");
+                isReadingFile = false;
+            }
+            messageBin.Clear();
+            Console.WriteLine("Stopped reading from file.");
         }
 
         private void checkMessageBinForDisplay() {
@@ -62,10 +93,47 @@ namespace RetroTicker {
             messageBin.Add(messageFactory.createChatMessage(rawText));
         }
 
+        private void addMessage(String text) {
+            messageBin.Add(messageFactory.createMessage(text));
+        }
+
+        private void fillMessageBinFromFile() {
+            using (StreamReader file = new StreamReader(getMessageBinFilePath())) {
+                String line;
+                while ((line = file.ReadLine()) != null) {
+                    Console.WriteLine("adding generic message = " + line);
+                    messageBin.Add(messageFactory.createMessage(line));
+                }
+            }
+        }
+
         private List<Message> createDemoMessages() {
 
             List<Message> messages = new List<Message>();
 
+            Message leo = messageFactory.createMessage("Leonardo");
+            leo.displayType = (int)DisplayType.ScrollUp;
+            leo.color = System.Drawing.Color.RoyalBlue;
+            messages.Add(leo);
+
+
+            Message raph = messageFactory.createMessage("Raphael");
+            raph.displayType = (int)DisplayType.ScrollDown;
+            raph.color = System.Drawing.Color.Red;
+            messages.Add(raph);
+
+
+            Message mikey = messageFactory.createMessage("Michelangelo");
+            mikey.displayType = (int)DisplayType.Horizontal;
+            mikey.color = System.Drawing.Color.Orange;
+            messages.Add(mikey);
+
+            Message don = messageFactory.createMessage("Donatello");
+            don.displayType = (int)DisplayType.Vertical;
+            don.color = System.Drawing.Color.Purple;
+            messages.Add(don);
+
+            /*
             Message scrollUpMessage = messageFactory.createMessage("Scroll Up Scroll Up");
             scrollUpMessage.displayType = (int)DisplayType.ScrollUp;
             messages.Add(scrollUpMessage);
@@ -89,7 +157,7 @@ namespace RetroTicker {
             Message randomMessage = messageFactory.createMessage("Random Random Random");
             randomMessage.displayType = (int)DisplayType.Random;
             messages.Add(randomMessage);
-
+            */
             return messages;
         }
 
@@ -97,8 +165,8 @@ namespace RetroTicker {
             //for debugging messages
             List<Message> messages = new List<Message>();
             messageFactory.enableDebugging();
-            //messages = createDemoMessages();
-            messages.Add(messageFactory.createMessage(messageFactory.getAlphabetAsString()));
+            messages = createDemoMessages();
+            //messages.Add(messageFactory.createMessage(messageFactory.getAlphabetAsString()));
             messageFactory.disableDebugging();
             return messages;
         }
@@ -130,13 +198,28 @@ namespace RetroTicker {
         }
 
         public void startReading() {
-            bot.startReading();
-            Thread messageReader = new Thread(new ThreadStart(this.Run));
+            //if bot is connected, read chat messages
+            //otherwise read from file
+
+            Thread messageReader = null;
+            if (bot != null && bot.isRunning()) {
+                Console.WriteLine("Bot is running -- reading messages from chat");
+                bot.startReading();
+                messageReader = new Thread(readMessagesFromChat);
+            } else {
+                Console.WriteLine("reading messages from file");
+                isReadingFile = true;
+                messageReader = new Thread(readMessagesFromFile);
+            }
             messageReader.Start();
         }
 
         public void stopReading() {
-            bot.stopReading();
+            if (bot != null && bot.isRunning()) {
+                bot.stopReading();
+            } else {
+                isReadingFile = false;
+            }
         }
 
         public void disconnect() {
@@ -168,6 +251,11 @@ namespace RetroTicker {
             String filePath = BotConfig.getFilePath();
             Console.WriteLine("Checking for config file at path: " + filePath);
             return File.Exists(filePath);
+        }
+
+        private String getMessageBinFilePath() {
+            String baseDir = Path.GetFullPath(AppDomain.CurrentDomain.BaseDi‌​rectory);
+            return baseDir + "data\\messages.txt";
         }
     }
 }
