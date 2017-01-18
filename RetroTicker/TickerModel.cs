@@ -18,12 +18,14 @@ namespace RetroTicker {
         List<IMessageObserver> messageObservers = new List<IMessageObserver>();
         List<IBotObserver> botObservers = new List<IBotObserver>();
 
+        List<String> linesFromFile = new List<String>();
         private volatile bool isReadingFile = false;
 
         public TickerModel() {
             Alphabet alphabet = new Alphabet();
             messageFactory = new MessageFactory(alphabet);
             config = new BotConfig();
+            getMessagesFromFile();
         }
 
         public bool connect() {
@@ -46,31 +48,79 @@ namespace RetroTicker {
         private void readMessagesFromChat() {
             //** MESSAGE READING THREAD **
             //reads messages from chat until user clicks the "stop reading" button
+            //NOTE: messages
                
             while (bot.isReading()) {
+
                 int messageCount = messageBin.Count;
                 Console.WriteLine("number of messages in bin = " + messageCount);
-                if (messageCount == 0) {
-                    Thread.Sleep(3000);
-                } else {
-                    List<Message> copyOfMessageBin = new List<Message>(messageBin);
-                    messageBin.Clear();
+
+                //get copy of message bin to prevent repeated messages
+                List<Message> copyOfMessageBin = new List<Message>(messageBin);
+                messageBin.Clear();
+
+                //limit the number of messages shown based on message rate
+                if (messageCount > 13) {
+                    notifyMessageObservers(trimMessages(copyOfMessageBin, 4));
+                } else if (messageCount > 8) {
+                    notifyMessageObservers(trimMessages(copyOfMessageBin, 3));
+                } else if (messageCount > 3) {
+                    notifyMessageObservers(trimMessages(copyOfMessageBin, 2));
+                } else if (messageCount > 0) {
                     notifyMessageObservers(copyOfMessageBin);
+                } else {
+                    Thread.Sleep(3000);
                 }
+
+                //if there still aren't any messages after loop, wait extra 1.5 sec
+                if (messageBin.Count == 0) {
+                    Thread.Sleep(1500);
+                }
+
             }
             Console.WriteLine("Bot stopped reading.");
+        }
+
+        private List<Message> trimMessages(List<Message> messageList, int step) {
+            //reduce the amount the given messageList based on the given step
+            //picks one message for every x messages (x = step)
+            //preserves chronological order of messages
+
+            List<Message> trimmedMessageList = new List<Message>();
+
+            //first get one random index of message per each segment of the list
+            int messageCount = messageList.Count;
+            int[] displayMessageIndices = new int[messageList.Count/step];
+            Random rng = new Random();
+            int i = 0;
+            for (int stepIndex = 0; stepIndex < messageCount - step; stepIndex += step) {
+                displayMessageIndices[i] = stepIndex + rng.Next(step);
+                i++;
+            }
+
+            //now add each message based on the random index
+            foreach (int index in displayMessageIndices) {
+                trimmedMessageList.Add(messageList[index]);
+            }
+
+            Console.WriteLine($"MessageList trimmed down to {trimmedMessageList.Count} messages");
+            return trimmedMessageList;
         }
 
         private void readMessagesFromFile() {
             //** MESSAGE READING THREAD **
             //reads messages from chat until user clicks the "stop reading" button
-            //NOTE: fills messageBin before loop, clears it after
+            //NOTE: re-fills messageBin before and after each loop to ensure fresh animations and colors
 
-            fillMessageBinFromFile();
-            int messageCount = messageBin.Count;
+            //clear any remaining messages from bin
+            messageBin.Clear();
+            int messageCount = linesFromFile.Count;
+            Console.WriteLine($"Found {messageCount} messages from file");
             if (messageCount > 0) {
                 while (isReadingFile) {
+                    fillMessageBinFromFile();
                     notifyMessageObservers(messageBin);
+                    messageBin.Clear();
                 }
             } else {
                 Console.WriteLine("No messages found in file!");
@@ -98,11 +148,23 @@ namespace RetroTicker {
         }
 
         private void fillMessageBinFromFile() {
+            //Use messageFactory to create a new Message object for each message from file
+            //during display, this function is called after each iteration to ensure
+            //that the animations and text colors stay fresh :)
+
+            foreach (String message in linesFromFile) {
+                messageBin.Add(messageFactory.createMessage(message));
+            }
+        }
+
+        private void getMessagesFromFile() {
+            //get messages from file and store in list
+
             using (StreamReader file = new StreamReader(getMessageBinFilePath())) {
                 String line;
                 while ((line = file.ReadLine()) != null) {
                     Console.WriteLine("adding generic message = " + line);
-                    messageBin.Add(messageFactory.createMessage(line));
+                    linesFromFile.Add(line);
                 }
             }
         }
@@ -110,6 +172,12 @@ namespace RetroTicker {
         private List<Message> createDemoMessages() {
 
             List<Message> messages = new List<Message>();
+
+            Message intro = messageFactory.createMessage("Recent subs:");
+            intro.displayType = (int)DisplayType.Random;
+            intro.color = System.Drawing.Color.LightGreen;
+            messages.Add(intro);
+
 
             Message leo = messageFactory.createMessage("Leonardo");
             leo.displayType = (int)DisplayType.ScrollUp;
@@ -158,6 +226,7 @@ namespace RetroTicker {
             randomMessage.displayType = (int)DisplayType.Random;
             messages.Add(randomMessage);
             */
+
             return messages;
         }
 
@@ -220,6 +289,7 @@ namespace RetroTicker {
             } else {
                 isReadingFile = false;
             }
+
         }
 
         public void disconnect() {

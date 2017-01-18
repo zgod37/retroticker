@@ -36,6 +36,8 @@ namespace RetroTicker {
             wipePanelsInstantly();
         }
 
+        
+
         private void createPanelMatrix() {
 
             //create panel matrix
@@ -180,7 +182,7 @@ namespace RetroTicker {
                     }
                 }
 
-                sleep(175);
+                sleep(100);
             }
 
         }
@@ -196,7 +198,7 @@ namespace RetroTicker {
                         colorRowFromInstruction(instruction, instructionIndex + (bottomRow - (Alphabet.CHARACTER_HEIGHT - 1)), leftCol + (charIndex * (Alphabet.CHARACTER_WIDTH + 1)), message.color);
                     }
                 }
-                sleep(175);
+                sleep(100);
             }
         }
 
@@ -251,7 +253,7 @@ namespace RetroTicker {
                     }
                 }
                 wipeSingleRow(topRow - 1);
-                sleep(175);
+                sleep(100);
             }
         }
 
@@ -267,7 +269,7 @@ namespace RetroTicker {
                     }
                 }
                 wipeSingleRow(bottomRow + 1);
-                sleep(175);
+                sleep(100);
             }
         }
 
@@ -395,5 +397,13 @@ namespace RetroTicker {
             Application.DoEvents();
         }
 
+        private void TickerForm_FormClosing(object sender, FormClosingEventArgs e) {
+            //prevent form from disposing on x out
+
+            if (e.CloseReason == CloseReason.UserClosing) {
+                e.Cancel = true;
+                Hide();
+            }
+        }
     }
 }

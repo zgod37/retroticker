@@ -32,12 +32,10 @@ namespace RetroTicker {
 
         public void startReading() {
             model.startReading();
-            view.setStatusReading();
         }
 
         public void stopReading() {
             model.stopReading();
-            view.setStatusConnected();
         }
 
         public void showCredentialsForm() {
