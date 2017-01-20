@@ -96,10 +96,12 @@ namespace RetroTicker {
         }
 
         private void testTickerButton_Click(object sender, EventArgs e) {
+            if (!tickerForm.Visible) tickerForm.Show();
             controller.testTicker();
         }
 
         private void startReadingButton_Click(object sender, EventArgs e) {
+            if (!tickerForm.Visible) tickerForm.Show();
             controller.startReading();
         }
 
